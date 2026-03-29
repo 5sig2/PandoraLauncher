@@ -30,6 +30,24 @@ pub struct ModrinthProjectPage {
     mods_load_state: Option<(BridgeDataLoadState, AtomicOptionSerial)>,
 }
 
+fn preprocess_modrinth_markdown(body: &str) -> String {
+    let mut out = String::with_capacity(body.len());
+    for line in body.lines() {
+        let trimmed = line.trim_start();
+        let indent_len = line.len() - trimmed.len();
+        if indent_len >= 2 && trimmed.starts_with("> ") {
+            let content = trimmed[2..].trim_end();
+            out.push_str(&line[..indent_len]);
+            out.push_str("┃ ");
+            out.push_str(content);
+        } else {
+            out.push_str(line);
+        }
+        out.push('\n');
+    }
+    out
+}
+
 impl ModrinthProjectPage {
     pub fn new(
         project_id: SharedString,
@@ -405,8 +423,9 @@ impl Render for ModrinthProjectPage {
             let body_el: AnyElement = match active_tab {
                 0 => {
                     if let Some(body) = &project.body && !body.is_empty() {
+                        let body = preprocess_modrinth_markdown(body.as_ref());
                         v_flex()
-                            .child(TextView::markdown("project_description", body.to_string()).gap_4())
+                            .child(TextView::markdown("project_description", body).gap_4())
                             .into_any_element()
                     } else {
                         v_flex()
